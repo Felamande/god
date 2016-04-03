@@ -9,7 +9,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Version = "1.0.0"
+	app.Version = "1.1.0"
 	app.Name = filepath.Base(os.Args[0])
 	app.Usage = "An automation tool for Go project."
 	app.Commands = append(app.Commands, appRun)
