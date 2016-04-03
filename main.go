@@ -12,6 +12,6 @@ func main() {
 	app.Version = "1.1.0"
 	app.Name = filepath.Base(os.Args[0])
 	app.Usage = "An automation tool for Go project."
-	app.Commands = append(app.Commands, appRun)
+	app.Commands = append(app.Commands, appRun, initCmd)
 	app.Run(os.Args)
 }
