@@ -1,6 +1,7 @@
 package god
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,7 +21,7 @@ type taskRunner struct {
 	// errCb    otto.Value
 	lastTime time.Time
 	lastPath string
-	// unique bool
+	unique   bool
 }
 
 var tasks []*taskRunner
@@ -57,6 +58,7 @@ func init() {
 	}
 }
 
+// function init(initfn, fnArgs...)
 func initfn(call otto.FunctionCall) otto.Value {
 	initCall = call.ArgumentList
 	return otto.UndefinedValue()
@@ -77,13 +79,14 @@ func ignore(call otto.FunctionCall) otto.Value {
 
 func watch(call otto.FunctionCall) otto.Value {
 	wildcards, _ := call.Argument(0).Export()
-	eventCb := call.Argument(1)
+	unique, _ := call.Argument(1).ToBoolean()
+	eventCb := call.Argument(2)
 	switch w := wildcards.(type) {
 	case string:
-		tasks = append(tasks, &taskRunner{w, eventCb, time.Now(), ""})
+		tasks = append(tasks, &taskRunner{w, eventCb, time.Now(), "", unique})
 	case []string:
 		for _, wildcard := range w {
-			tasks = append(tasks, &taskRunner{wildcard, eventCb, time.Now(), ""})
+			tasks = append(tasks, &taskRunner{wildcard, eventCb, time.Now(), "", unique})
 		}
 	}
 
@@ -116,19 +119,37 @@ func Run() {
 			if isDir(abs) {
 				w.Add(rel)
 			}
-
+			var uniqueTask *taskRunner
+			var normalTasks []*taskRunner
 			for _, t := range tasks {
 
 				if wildmatch.IsSubsetOf(path.Clean(rel), t.wildcard) {
 					if t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 1 {
-						goto end
+						t.lastPath = rel
+						t.lastTime = time.Now()
+						continue
 					}
-					jsvm.Callback(t.eventCb, abs, rel)
-				end:
-					t.lastPath = rel
-					t.lastTime = time.Now()
+					if t.unique {
+						uniqueTask = t
+					} else {
+						normalTasks = append(normalTasks, t)
+					}
+					// jsvm.Callback(t.eventCb, abs, rel)
 				}
 
+			}
+			if uniqueTask != nil {
+				fmt.Println("I am unique")
+				jsvm.Callback(uniqueTask.eventCb, abs, rel)
+				uniqueTask.lastPath = rel
+				uniqueTask.lastTime = time.Now()
+				continue
+			}
+			for _, t := range normalTasks {
+				fmt.Println("I am not unique")
+				jsvm.Callback(t.eventCb, abs, rel)
+				t.lastPath = rel
+				t.lastTime = time.Now()
 			}
 		}
 	}
