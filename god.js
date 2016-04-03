@@ -9,39 +9,35 @@ god.ignore(".git", ".vscode")
 
 god.init(function(){go.reload("./test")})
 
-god.watch("./test/*.go",function(abs,rel) {
+
+//function watch(wildcard, unique, eventCallback)
+//wildcard, match the path or file
+//unique, if unique is true, only this callback will be called and the others will be ignored. 
+god.watch("./test/*.go",false,function(abs,rel) {
     go.reload(path.dir(rel),[],[],function(err) {
         if(err){log.error(err)}
     })
 })
 
 
-// function rebuild(name) {
-//     os.system([tool, "build", "-o", name + "_tmp.exe"])
-//     os.system(["taskkill", "/im", name + ".exe"], "/f")
-//     os.rename(name + "_tmp.exe", name + ".exe")
-//     os.exec(name + ".exe")
-// }
+god.watch(["*_test.go", "**/*_test.go"],true,
+    function(abs, rel) {
+            go.test(path.dir(rel),[],function(err){log.error(err)})    
+    }
+)
 
-// god.watch(["*_test.go", "**/*_test.go"],
-//     function(abs, rel) {
-//         os.system([tool, "test", path.dir(rel)])
-//     }
-// )
+//This will not be called if test files are changed. 
+god.watch("**/*.go",false,
+    function(abs, rel) {
+        go.install(path.dir(rel),[],function(err){log.error(err)})
+    }
+)
 
-// god.watch("**/*.go",
-//     function(abs, rel) {
-//         if (rel.indexOf("_test.go") >= 0) return;
-//         os.system([tool, "install", path.dir(rel)])
-//     }
-// )
-
-// god.watch(["*.go"],
-//     function(abs, rel) {
-//         if (rel.indexOf("_test.go") >= 0) return;
-//         rebuild(os.wdName())
-
-//     }
-// )
+god.watch(["*.go"],false,
+    function(abs, rel) {
+        log.info("reload",rel)  
+        go.reload(".",[],[],function(err){if(err){log.error(err)}})
+    }
+)
 
 
