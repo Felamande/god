@@ -1,7 +1,6 @@
 package god
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -114,6 +113,9 @@ func Run() {
 	for {
 		select {
 		case e := <-w.Events:
+			if e.Op == fsnotify.Rename || e.Op == fsnotify.Remove || e.Op == fsnotify.Chmod {
+				continue
+			}
 			rel := format(e.Name)
 			abs := filepath.Join(wd, rel)
 			if isDir(abs) {
@@ -123,10 +125,9 @@ func Run() {
 			var normalTasks []*taskRunner
 			for _, t := range tasks {
 
-				if wildmatch.IsSubsetOf(path.Clean(rel), t.wildcard) {
-					if t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 1 {
-						t.lastPath = rel
-						t.lastTime = time.Now()
+				if t.match(rel) {
+					if t.intervalTooShort(rel) {
+						t.delay(rel)
 						continue
 					}
 					if t.unique {
@@ -139,23 +140,41 @@ func Run() {
 
 			}
 			if uniqueTask != nil {
-				fmt.Println("I am unique")
-				jsvm.Callback(uniqueTask.eventCb, abs, rel)
-				uniqueTask.lastPath = rel
-				uniqueTask.lastTime = time.Now()
+				// fmt.Println("I am unique")
+				uniqueTask.raise(abs, rel)
+				for _, nt := range normalTasks {
+					nt.delay(rel)
+				}
 				continue
 			}
 			for _, t := range normalTasks {
-				fmt.Println("I am not unique")
-				jsvm.Callback(t.eventCb, abs, rel)
-				t.lastPath = rel
-				t.lastTime = time.Now()
+				// fmt.Println("I am not unique")
+				t.raise(abs, rel)
 			}
 		}
 	}
 	// return otto.UndefinedValue()
 
 }
+
+func (t *taskRunner) raise(abs, rel string) {
+	jsvm.Callback(t.eventCb, abs, rel)
+	t.delay(rel)
+}
+
+func (t *taskRunner) delay(rel string) {
+	t.lastPath = rel
+	t.lastTime = time.Now()
+}
+
+func (t *taskRunner) match(rel string) bool {
+	return wildmatch.IsSubsetOf(path.Clean(rel), t.wildcard)
+}
+
+func (t *taskRunner) intervalTooShort(rel string) bool {
+	return t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 1
+}
+
 func format(path string) string {
 	return strings.Replace(path, "\\", "/", -1)
 }
