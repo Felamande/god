@@ -32,7 +32,7 @@ func run(c *cli.Context) {
 	f := c.String("config")
 	jsvm.Run(f)
 	lastReloadTime = time.Now()
-	go MustWatch(f)
+	// go MustWatch(f)
 	god.Run()
 
 }
