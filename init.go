@@ -44,12 +44,8 @@ func initfn(c *cli.Context) {
 
 	isSetFlag(c, "override",
 		func(_ interface{}) error {
-
 			ioutil.WriteFile("god.js", []byte(defaultjs), 0777)
 			fmt.Println("--override: god.js overrided.")
-			return nil
-		},
-		func() error {
 			return nil
 		},
 	)
@@ -80,9 +76,6 @@ func initfn(c *cli.Context) {
 				return nil
 			}
 			fmt.Println("--ignore: ok")
-			return nil
-		},
-		func() error {
 			return nil
 		},
 	)
@@ -126,8 +119,7 @@ god.watch(["*_test.go", "**/*_test.go"], true,
 )
 
 // ** will match ONE or more directories
-//    
-// * will match as many chars as possible except slash or just ONE directory.
+// * will match just ONE directory or as many chars as possible except slash .
 god.watch("**/*.go", false,
     function(event) {
         go.install(event.dir, installArgs, function(err) { log.error(err) })
