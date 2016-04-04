@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Felamande/god/process"
@@ -34,9 +33,6 @@ func build(call otto.FunctionCall) otto.Value {
 	Args := call.Argument(1)
 	errCb := call.Argument(2)
 
-	if !strings.HasPrefix(pkg, "./") {
-		pkg = "./" + pkg
-	}
 	abs, err := filepath.Abs(pkg)
 	if err != nil {
 		return jsvm.Callback(errCb, err.Error())
@@ -60,9 +56,6 @@ func install(call otto.FunctionCall) otto.Value {
 	pkg := call.Argument(0).String()
 	Args := call.Argument(1)
 	errCb := call.Argument(2)
-	if !strings.HasPrefix(pkg, "./") {
-		pkg = "./" + pkg
-	}
 
 	err := exect(nil, "go", "install", Args, pkg)
 	if err != nil {
@@ -84,9 +77,6 @@ func test(call otto.FunctionCall) otto.Value {
 	Args := call.Argument(1)
 	errCb := call.Argument(2)
 
-	if !strings.HasPrefix(pkg, "./") {
-		pkg = "./" + pkg
-	}
 	err := exect(os.Stdout, "go", "test", Args, pkg)
 	if err != nil {
 		return jsvm.Callback(errCb, err.Error())
@@ -107,10 +97,6 @@ func reload(call otto.FunctionCall) otto.Value {
 	buildArgs := call.Argument(1)
 	binArgs := call.Argument(2)
 	errCb := call.Argument(3)
-
-	if !strings.HasPrefix(pkgPath, "./") {
-		pkgPath = "./" + pkgPath
-	}
 
 	abs, err := filepath.Abs(pkgPath)
 	if err != nil {

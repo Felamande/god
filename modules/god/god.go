@@ -49,7 +49,7 @@ func callInit() {
 
 func init() {
 	wd, _ = os.Getwd()
-	wd = format(wd)
+	wd = filepath.ToSlash(wd)
 	if p := jsvm.Module("god"); p != nil {
 		p.Extend("watch", watch)
 		p.Extend("ignore", ignore)
@@ -82,6 +82,7 @@ func watch(call otto.FunctionCall) otto.Value {
 	eventCb := call.Argument(2)
 	switch w := wildcards.(type) {
 	case string:
+
 		tasks = append(tasks, &taskRunner{w, eventCb, time.Now(), "", unique})
 	case []string:
 		for _, wildcard := range w {
@@ -98,7 +99,9 @@ func Run() {
 	w, _ := fsnotify.NewWatcher()
 	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		for _, ig := range ignored {
-			if wildmatch.IsSubsetOf(format(path), ig) {
+			// fmt.Println(filepath.ToSlash(path), ig, "watched",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
+			if wildmatch.IsSubsetOf(filepath.ToSlash(path), ig) {
+				// fmt.Println(filepath.ToSlash(path), ig, "skipped",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
 
 				return filepath.SkipDir
 			}
@@ -113,52 +116,53 @@ func Run() {
 	for {
 		select {
 		case e := <-w.Events:
-			if e.Op == fsnotify.Rename || e.Op == fsnotify.Remove || e.Op == fsnotify.Chmod {
-				continue
-			}
-			rel := format(e.Name)
-			abs := filepath.Join(wd, rel)
-			if isDir(abs) {
-				w.Add(rel)
-			}
-			var uniqueTask *taskRunner
-			var normalTasks []*taskRunner
-			for _, t := range tasks {
-
-				if t.match(rel) {
-					if t.intervalTooShort(rel) {
-						t.delay(rel)
-						continue
-					}
-					if t.unique {
-						uniqueTask = t
-					} else {
-						normalTasks = append(normalTasks, t)
-					}
-					// jsvm.Callback(t.eventCb, abs, rel)
+			rel, abs := getPath(e.Name)
+			dir := getDir(rel)
+			switch e.Op {
+			case fsnotify.Create:
+				if isDir(abs) {
+					w.Add(rel)
 				}
+			case fsnotify.Write:
+				var uniqueTask *taskRunner
+				var normalTasks []*taskRunner
+				for _, t := range tasks {
+
+					if t.match(rel) {
+						if t.intervalTooShort(rel) {
+							t.delay(rel)
+							continue
+						}
+						if t.unique {
+							uniqueTask = t
+						} else {
+							normalTasks = append(normalTasks, t)
+						}
+					}
+
+				}
+				if uniqueTask != nil {
+					uniqueTask.raise(abs, rel, dir)
+					for _, nt := range normalTasks {
+						nt.delay(rel)
+					}
+					continue
+				}
+				for _, t := range normalTasks {
+					t.raise(abs, rel, dir)
+				}
+			default:
 
 			}
-			if uniqueTask != nil {
-				// fmt.Println("I am unique")
-				uniqueTask.raise(abs, rel)
-				for _, nt := range normalTasks {
-					nt.delay(rel)
-				}
-				continue
-			}
-			for _, t := range normalTasks {
-				// fmt.Println("I am not unique")
-				t.raise(abs, rel)
-			}
+
 		}
 	}
 	// return otto.UndefinedValue()
 
 }
 
-func (t *taskRunner) raise(abs, rel string) {
-	jsvm.Callback(t.eventCb, abs, rel)
+func (t *taskRunner) raise(abs, rel, dir string) {
+	jsvm.Callback(t.eventCb, jsvm.ToObject(jsvm.O{"rel": rel, "abs": abs, "dir": dir}))
 	t.delay(rel)
 }
 
@@ -168,17 +172,56 @@ func (t *taskRunner) delay(rel string) {
 }
 
 func (t *taskRunner) match(rel string) bool {
-	return wildmatch.IsSubsetOf(path.Clean(rel), t.wildcard)
+	p := path.Clean(rel)
+	if strings.HasSuffix(p, "..") {
+		return false
+	}
+	p = strings.TrimLeft(p, "./")
+	return wildmatch.IsSubsetOf(p, t.wildcard)
 }
 
 func (t *taskRunner) intervalTooShort(rel string) bool {
-	return t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 1
+	// fmt.Println(rel, time.Now().Sub(t.lastTime).Seconds())
+	return t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 2
 }
 
-func format(path string) string {
-	return strings.Replace(path, "\\", "/", -1)
+func getPath(raw string) (rel, abs string) {
+	if !filepath.IsAbs(raw) {
+		rel = formatRel(raw)
+		abs = path.Join(wd, rel)
+		return
+	}
+	abs = filepath.ToSlash(raw)
+	tmp := strings.Split(abs, wd)
+	if len(tmp) == 1 {
+		rel = "."
+	} else {
+		rel = tmp[1]
+	}
+	return
+}
+
+func formatRel(path string) string {
+	path = filepath.ToSlash(path)
+	if path != "." && path != ".." && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") {
+		path = "./" + path
+	}
+	return path
 }
 func isDir(p string) bool {
 	fi, err := os.Stat(p)
 	return err == nil && fi.IsDir()
+}
+
+func getDir(p string) string {
+	p = filepath.ToSlash(p)
+	if filepath.IsAbs(p) {
+		return path.Dir(p)
+	}
+	var suffix string
+	dir := path.Dir(p)
+	if dir != "." && dir != ".." {
+		suffix = "./"
+	}
+	return suffix + dir
 }
