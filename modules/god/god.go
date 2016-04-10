@@ -14,7 +14,7 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-type taskRunner struct {
+type watchTaskRunner struct {
 	wildcard string
 	eventCb  otto.Value
 	// errCb    otto.Value
@@ -23,43 +23,37 @@ type taskRunner struct {
 	unique   bool
 }
 
-var tasks []*taskRunner
+var allTasks map[string]*watchTaskRunner
+var SubCmd map[string]jsvm.Func
 var ignored []string
 var wd string
-var initCall []otto.Value
-var once = new(sync.Once)
+var Init jsvm.Func
 
-func callInit() {
-	once.Do(func() {
-		lenArg := len(initCall)
-		if initCall != nil && lenArg > 0 {
-			iarg := make([]interface{}, len(initCall)-1)
+var onceInitMod = new(sync.Once)
 
-			for idx, arg := range initCall {
-				if idx == 0 {
-					continue
-				}
-				iarg[idx-1] = arg
-			}
-			jsvm.Callback(initCall[0], iarg...)
+func init() {
+	onceInitMod.Do(func() {
+		allTasks = make(map[string]*watchTaskRunner)
+		SubCmd = make(map[string]jsvm.Func)
+		wd, _ = os.Getwd()
+		wd = filepath.ToSlash(wd)
+		if p := jsvm.Module("god"); p != nil {
+			p.Extend("watch", watch)
+			p.Extend("ignore", ignore)
+			p.Extend("init", initfn)
+			p.Extend("subcmd", subcmd)
 		}
 	})
 
 }
 
-func init() {
-	wd, _ = os.Getwd()
-	wd = filepath.ToSlash(wd)
-	if p := jsvm.Module("god"); p != nil {
-		p.Extend("watch", watch)
-		p.Extend("ignore", ignore)
-		p.Extend("init", initfn)
-	}
+func GetTask(name string) *watchTaskRunner {
+	return allTasks[name]
 }
 
 // function init(initfn, fnArgs...)
 func initfn(call otto.FunctionCall) otto.Value {
-	initCall = call.ArgumentList
+	Init = jsvm.Func(call.Argument(0))
 	return otto.UndefinedValue()
 }
 
@@ -77,55 +71,78 @@ func ignore(call otto.FunctionCall) otto.Value {
 }
 
 func watch(call otto.FunctionCall) otto.Value {
-	wildcards, _ := call.Argument(0).Export()
-	unique, _ := call.Argument(1).ToBoolean()
-	eventCb := call.Argument(2)
-	switch w := wildcards.(type) {
-	case string:
-
-		tasks = append(tasks, &taskRunner{w, eventCb, time.Now(), "", unique})
-	case []string:
-		for _, wildcard := range w {
-			tasks = append(tasks, &taskRunner{wildcard, eventCb, time.Now(), "", unique})
-		}
-	}
+	name := call.Argument(0).String()
+	wildcard := call.Argument(1).String()
+	unique, _ := call.Argument(2).ToBoolean()
+	eventCb := call.Argument(3)
+	allTasks[name] = &watchTaskRunner{wildcard, eventCb, time.Now(), "", unique}
 
 	return otto.UndefinedValue()
 }
 
-func Run() {
-	callInit()
+func subcmd(call otto.FunctionCall) otto.Value {
+	cmdName := call.Argument(0).String()
+	CbFunc := call.Argument(1)
+	SubCmd[cmdName] = jsvm.Func(CbFunc)
+	return otto.UndefinedValue()
+}
 
-	w, _ := fsnotify.NewWatcher()
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		for _, ig := range ignored {
-			// fmt.Println(filepath.ToSlash(path), ig, "watched",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
-			if wildmatch.IsSubsetOf(filepath.ToSlash(path), ig) {
-				// fmt.Println(filepath.ToSlash(path), ig, "skipped",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
+var walkOnce = new(sync.Once)
+var w *fsnotify.Watcher
 
-				return filepath.SkipDir
+func BeginWatch(taskNames ...string) {
+	tasks := make(map[string]*watchTaskRunner)
+
+	if len(taskNames) == 1 && taskNames[0] == "*" {
+		tasks = allTasks
+	} else {
+		for _, tn := range taskNames {
+			if t, ok := allTasks[tn]; ok {
+				tasks[tn] = t
 			}
-		}
-		if !info.IsDir() {
-			return nil
-		}
-		w.Add(path)
 
-		return nil
+		}
+	}
+
+	if len(tasks) == 0 {
+		return
+	}
+	walkOnce.Do(func() {
+		w, _ = fsnotify.NewWatcher()
+		filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+			for _, ig := range ignored {
+				// fmt.Println(filepath.ToSlash(path), ig, "watched",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
+				if wildmatch.IsSubsetOf(filepath.ToSlash(path), ig) {
+					// fmt.Println(filepath.ToSlash(path), ig, "skipped",wildmatch.IsSubsetOf(filepath.ToSlash(path), ig))
+
+					return filepath.SkipDir
+				}
+			}
+			if !info.IsDir() {
+				return nil
+			}
+			w.Add(path)
+
+			return nil
+		})
 	})
+
 	for {
 		select {
+
 		case e := <-w.Events:
-			rel, abs := getPath(e.Name)
+			Name := filepath.ToSlash(e.Name)
+			rel, abs := getPath(Name)
 			dir := getDir(rel)
+
 			switch e.Op {
 			case fsnotify.Create:
 				if isDir(abs) {
 					w.Add(rel)
 				}
 			case fsnotify.Write:
-				var uniqueTask *taskRunner
-				var normalTasks []*taskRunner
+				var uniqueTask *watchTaskRunner
+				var normalTasks []*watchTaskRunner
 				for _, t := range tasks {
 
 					if t.match(rel) {
@@ -161,17 +178,17 @@ func Run() {
 
 }
 
-func (t *taskRunner) raise(abs, rel, dir string) {
+func (t *watchTaskRunner) raise(abs, rel, dir string) {
 	jsvm.Callback(t.eventCb, jsvm.ToObject(jsvm.O{"rel": rel, "abs": abs, "dir": dir}))
 	t.delay(rel)
 }
 
-func (t *taskRunner) delay(rel string) {
+func (t *watchTaskRunner) delay(rel string) {
 	t.lastPath = rel
 	t.lastTime = time.Now()
 }
 
-func (t *taskRunner) match(rel string) bool {
+func (t *watchTaskRunner) match(rel string) bool {
 	p := path.Clean(rel)
 	if strings.HasSuffix(p, "..") {
 		return false
@@ -180,7 +197,7 @@ func (t *taskRunner) match(rel string) bool {
 	return wildmatch.IsSubsetOf(p, t.wildcard)
 }
 
-func (t *taskRunner) intervalTooShort(rel string) bool {
+func (t *watchTaskRunner) intervalTooShort(rel string) bool {
 	// fmt.Println(rel, time.Now().Sub(t.lastTime).Seconds())
 	return t.lastPath == rel && time.Now().Sub(t.lastTime).Seconds() < 2
 }
@@ -191,18 +208,17 @@ func getPath(raw string) (rel, abs string) {
 		abs = path.Join(wd, rel)
 		return
 	}
-	abs = filepath.ToSlash(raw)
+
 	tmp := strings.Split(abs, wd)
 	if len(tmp) == 1 {
 		rel = "."
 	} else {
-		rel = tmp[1]
+		rel = formatRel(tmp[1])
 	}
 	return
 }
 
 func formatRel(path string) string {
-	path = filepath.ToSlash(path)
 	if path != "." && path != ".." && !strings.HasPrefix(path, "./") && !strings.HasPrefix(path, "../") {
 		path = "./" + path
 	}
@@ -214,7 +230,6 @@ func isDir(p string) bool {
 }
 
 func getDir(p string) string {
-	p = filepath.ToSlash(p)
 	if filepath.IsAbs(p) {
 		return path.Dir(p)
 	}
