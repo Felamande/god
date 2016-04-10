@@ -2,6 +2,7 @@ package log
 
 import (
 	"os"
+	"sync"
 
 	"github.com/Felamande/jsvm"
 	"github.com/Felamande/otto"
@@ -9,14 +10,18 @@ import (
 )
 
 var logger *log.Logger
+var once = new(sync.Once)
 
 func init() {
-	logger = log.New(os.Stdout, "[daemon]", log.LstdFlags|log.Llevel)
-	if p := jsvm.Module("log"); p != nil {
-		p.Extend("info", info)
-		p.Extend("error", err)
-		p.Extend("warn", warn)
-	}
+	once.Do(func() {
+		logger = log.New(os.Stdout, "[daemon]", log.LstdFlags|log.Llevel)
+		if p := jsvm.Module("log"); p != nil {
+			p.Extend("info", info)
+			p.Extend("error", err)
+			p.Extend("warn", warn)
+		}
+	})
+
 }
 
 func info(call otto.FunctionCall) otto.Value {

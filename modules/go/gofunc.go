@@ -9,23 +9,29 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
-	"github.com/Felamande/god/process"
+	"github.com/Felamande/god/lib/process"
 	"github.com/Felamande/jsvm"
 	"github.com/Felamande/otto"
 )
 
 var actionTime = make(map[string]time.Time)
+var once = new(sync.Once)
 
 func init() {
-	// wd, _ = os.Getwd()
-	if p := jsvm.Module("go"); p != nil {
-		p.Extend("build", build)
-		p.Extend("install", install)
-		p.Extend("test", test)
-		p.Extend("reload", reload)
-	}
+	// wd, _ = os.Getwd()var once = new(sync.Once)
+	once.Do(func() {
+
+		if p := jsvm.Module("go"); p != nil {
+			p.Extend("build", build)
+			p.Extend("install", install)
+			p.Extend("test", test)
+			p.Extend("reload", reload)
+		}
+	})
+
 }
 
 func build(call otto.FunctionCall) otto.Value {
