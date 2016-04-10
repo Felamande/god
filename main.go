@@ -43,13 +43,11 @@ func main() {
 	}
 
 	go hotkey.ApplyAll()
-
-	god.Init.Call()
 	app.Run(os.Args)
 }
 
 func enterAction(c *cli.Context) {
-	// fmt.Println("enter")
+	god.Init.Call()
 	line := liner.NewLiner()
 	defer line.Close()
 	line.SetCtrlCAborts(false)
