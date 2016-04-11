@@ -47,13 +47,13 @@ func (k *Keyboard) Bind(seq string, f func()) error {
 
 }
 
-func (k *Keyboard) ReadEvents(seqChan chan string, errChan chan error) error {
+func (k *Keyboard) ReadEvents(seqChan chan string, errChan chan error) {
 
-	return ErrUnimplemeted
+	errChan <- ErrUnimplemeted
 }
 
-func (k *Keyboard) Start() error {
+func (k *Keyboard) Start(errChan chan error) {
 
-	return ErrUnimplemeted
+	errChan <- ErrUnimplemeted
 
 }
