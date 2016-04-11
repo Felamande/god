@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Felamande/god/lib/process"
-	"github.com/Felamande/jsvm"
+	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/otto"
 )
 

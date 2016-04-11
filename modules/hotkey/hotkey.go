@@ -1,17 +1,14 @@
 package hotkey
 
 import (
-	"os"
-
 	"github.com/Felamande/god/lib/kbevent"
-	"github.com/Felamande/jsvm"
+	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/otto"
 )
 
 var kb = kbevent.New()
 
 func init() {
-	kb.Bind("ctrl+d", func() { os.Exit(0) })
 	if m := jsvm.Module("hotkey"); m != nil {
 		m.Extend("register", register)
 	}
@@ -27,6 +24,10 @@ func register(call otto.FunctionCall) otto.Value {
 	}
 
 	return otto.UndefinedValue()
+}
+
+func Bind(seq string, f func()) error {
+	return kb.Bind(seq, f)
 }
 
 func ApplyAll() {

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Felamande/jsvm"
+	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/otto"
 	"github.com/demon-xxi/wildmatch"
 	"gopkg.in/fsnotify.v1"
