@@ -1,24 +1,31 @@
 package kbevent
 
 import (
-	"errors"
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/Felamande/god/lib/sys"
 )
 
 func New() Interface {
 	return &Keyboard{
-		handlers: make(map[uintptr]func()),
-		started:  false,
+		handlers: make(map[uintptr]*handler),
+		m:        new(sync.Mutex),
 	}
 }
 
+type handler struct {
+	seq   string
+	mod   sys.Modifier
+	key   sys.Key
+	hfunc func()
+}
+
 type Keyboard struct {
-	handlers map[uintptr]func()
-	started  bool
+	handlers map[uintptr]*handler
+	m        *sync.Mutex
 }
 
 func (k *Keyboard) Init() error {
@@ -100,9 +107,13 @@ func (k *Keyboard) HandlerOf(seq string) func() {
 		lparamCode += uintptr(mcode)
 	}
 	lparamCode += uintptr(key) << 16
+	h, ok := k.handlers[lparamCode]
 
-	return k.handlers[lparamCode]
+	if !ok {
+		return nil
+	}
 
+	return h.hfunc
 }
 
 func (k *Keyboard) Bind(seq string, f func()) error {
@@ -119,22 +130,29 @@ func (k *Keyboard) Bind(seq string, f func()) error {
 	for _, mcode := range mods {
 		lparamCode += uintptr(mcode)
 	}
-
-	if !sys.RegisterHotKey(sys.HWND(0), 1, sys.Modifier(lparamCode), sys.Key(key)) {
-		return fmt.Errorf("bind %s: failed", seq)
-	}
+	mod := lparamCode
 
 	lparamCode += uintptr(key) << 16
 
-	k.handlers[lparamCode] = f
+	k.handlers[lparamCode] = &handler{seq, sys.Modifier(mod), sys.Key(key), f}
 	// k.Start()
 	return nil
 
 }
 
-func (k *Keyboard) ReadEvents(seqChan chan string, errChan chan error) error {
-	if k.started {
-		return errors.New("started twice")
+func (k *Keyboard) ReadEvents(seqChan chan string, errChan chan error) {
+	k.m.Lock()
+	defer k.m.Unlock()
+
+	//make sure that RegisterHotKey and GetMessage is runing in the same thread.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	for _, handler := range k.handlers {
+		if ok, err := sys.RegisterHotKey(sys.HWND(0), 1, handler.mod, handler.key); !ok {
+			errChan <- fmt.Errorf("bind %s: %v", handler.seq, err)
+			continue
+		}
 	}
 
 	// go func() {
@@ -152,26 +170,29 @@ func (k *Keyboard) ReadEvents(seqChan chan string, errChan chan error) error {
 		seq, err := k.GetSeq(modCodes, keyCode)
 		if err != nil {
 			errChan <- err
+			continue
 		}
 		seqChan <- seq
 
 	}
-	errChan <- errors.New("GetMessage terminated")
-	// }()
-	k.started = true
-	return nil
+	errChan <- ErrTerminated
 }
 
-func (k *Keyboard) Start() error {
+func (k *Keyboard) Start(errChan chan error) {
+	k.m.Lock()
+	defer k.m.Unlock()
+
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	if k.started {
-		return errors.New("started twice")
+	for _, handler := range k.handlers {
+		if ok, err := sys.RegisterHotKey(sys.HWND(0), 1, handler.mod, handler.key); !ok {
+			sendOrPrint(errChan, fmt.Errorf("bind %s: %v", handler.seq, err))
+			continue
+		}
 	}
 
 	msg := new(sys.MSG)
-	k.started = true
 
 	for sys.GetMessage(msg, sys.HWND(0), 0, 0) {
 		if msg.Message != sys.WM_HOTKEY {
@@ -179,11 +200,19 @@ func (k *Keyboard) Start() error {
 		}
 		// fmt.Printf("%v\n", key2Str[sys.Key(msg.LParam>>16)])
 		if f, ok := k.handlers[msg.LParam]; ok {
-			f()
+			f.hfunc()
 		}
 	}
-	return nil
+	sendOrPrint(errChan, ErrTerminated)
 
+}
+
+func sendOrPrint(c chan error, err error) {
+	if c != nil {
+		c <- err
+	} else {
+		fmt.Println(err)
+	}
 }
 
 var str2Mod = map[string]sys.Modifier{
