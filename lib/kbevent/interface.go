@@ -1,6 +1,7 @@
 package kbevent
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 )
@@ -22,9 +23,10 @@ type Interface interface {
 
 	Bind(seq string, f func()) error
 
-	Start() error
+	Start(chan error)
 
-	ReadEvents(chan string, chan error) error
+	ReadEvents(chan string, chan error)
 }
 
 var ErrUnimplemeted = fmt.Errorf("unimplemented on %s!", runtime.GOOS)
+var ErrTerminated = errors.New("GetMessage terminated")
