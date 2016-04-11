@@ -2,6 +2,7 @@ package sys
 
 import (
 	// _ "runtime/cgo"
+
 	"syscall"
 	"unsafe"
 )
@@ -34,14 +35,14 @@ const (
 	MaxPath = uint32(261)
 )
 
-func RegisterHotKey(hwnd IHwnd, id int, fsModifiers Modifier, vk Key) bool {
-	ret, _, _ := registerHotKey.Call(
+func RegisterHotKey(hwnd IHwnd, id int, fsModifiers Modifier, vk Key) (bool, error) {
+	ret, _, lerr := registerHotKey.Call(
 		hwnd.Hwnd(),
 		uintptr(id),
 		uintptr(fsModifiers),
 		uintptr(vk),
 	)
-	return ret != 0
+	return ret != 0, lerr
 }
 
 func SendMessage(hwnd IHwnd, msg uint32, wParam, lParam uintptr) uintptr {
