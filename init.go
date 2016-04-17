@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,7 +26,6 @@ var initCmd = cli.Command{
 }
 
 func initfn(c *cli.Context) {
-
 	noflag, err := noFlag(c, func() error {
 		if fi, _ := os.Stat("god.js"); fi != nil {
 			fmt.Println("already had a god.js, use --override or -o to override it with the default one.")
@@ -43,7 +43,7 @@ func initfn(c *cli.Context) {
 	}
 
 	isSetFlag(c, "override",
-		func(interface{}) error {
+		func(flag.Value) error {
 			ioutil.WriteFile("god.js", []byte(defaultjs), 0777)
 			fmt.Println("--override: god.js overrided.")
 			return nil
@@ -51,7 +51,7 @@ func initfn(c *cli.Context) {
 	)
 
 	isSetFlag(c, "ignore",
-		func(interface{}) error {
+		func(flag.Value) error {
 			f, err := os.OpenFile(".gitignore", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777)
 			if err != nil {
 				fmt.Println("--ignore:", err)
@@ -82,8 +82,7 @@ func initfn(c *cli.Context) {
 
 }
 
-const defaultjs = `//modules located in github.com/Felamande/jsvm/modules 
-//and github.com/Felamande/god/modules
+const defaultjs = `//modules located in github.com/Felamande/god/modules
 //you can write modules yourself if you're familiar with otto.
 god = require("god")
 log = require("log")
@@ -93,21 +92,21 @@ go = require("go")
 hk  = require("hotkey")
 
 
-//register hotkey as you like
-hk.register("ctrl+shift+o",function() {
+//bind hotkey as you like
+hk.bind("ctrl+shift+o",function() {
     log.info("hotkey","ctrl+shift+o")
 })
-hk.register("ctrl+shift+k",function() {
+hk.bind("ctrl+shift+k",function() {
     log.info("hotkey","ctrl+shift+k")
 })
 
-//changes of ignored files or dirs will not be watched 
+//changes of ignored files or dirs will not be watched
 god.ignore(".git", ".vscode")
 
 var buildArgs = []
 var installArgs = []
 var binArgs = []
-var testArgs = [] //args for reloaded binaries 
+var testArgs = [] //args for reloaded binaries
 
 //will be called immediately after god starts.
 god.init(function() {console.log("hello")})
@@ -116,10 +115,10 @@ god.init(function() {console.log("hello")})
 // define your subcommand, flags and arguments will be passed to the callback function.
 // (god) subcmd "-willnot=-be-parsed" name=what stringvalue -key=value -testarg=-test.v -godebug=gctrace=1 -boolval
 // will be parsed as
-// nargs = ["-willnot=-be-parsed", "name=what", "stringvalue"], 
+// nargs = ["-willnot=-be-parsed", "name=what", "stringvalue"],
 // flags = {"key":"value", "testarg":"-test.v", "godebug":"gctrace=1", "boolvar":true}
 god.subcmd("print",function(nargs,flags){
-   log.info(JSON.stringify(nargs),JSON.stringify(flags)) 
+   log.info(JSON.stringify(nargs),JSON.stringify(flags))
 })
 
 god.subcmd("eval",function (nargs,flags) {
@@ -129,9 +128,9 @@ god.subcmd("eval",function (nargs,flags) {
 god.subcmd("test",function(pkgs,flags){
     for(i in pkgs){
        log.info("test",pkgs[i])
-        go.test(pkgs[i], testArgs, function(err) { log.error(err) })  
+        go.test(pkgs[i], testArgs, function(err) { log.error(err) })
     }
-    
+
 })
 
 
@@ -139,14 +138,14 @@ god.subcmd("exec",function(nargs,flags){os.exec(nargs)})
 
 // function watch(name, wildcard, isUnique, callback)
 // if isUnique, the event which matches multiple wildcards will only be sent to the unique callback.
-//  
-// function callback(event) 
+//
+// function callback(event)
 // event.rel, relative path of matched file or directory
 // event.abs, absolute path of matched file or directory
 // event.dir, relative parent directory of matched file or directory
 //
 // path seperator will be slash on windows.
-// watch tasks will not start until you type the subcommand "watch [taskname...]", 
+// watch tasks will not start until you type the subcommand "watch [taskname...]",
 // after that tasks will run in a goroutine.
 
 god.watch("btest","*_test.go", true,

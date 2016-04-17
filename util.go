@@ -2,20 +2,21 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/codegangsta/cli"
 )
 
-func execFlag(c *cli.Context, name string, fn func(value interface{}) error) error {
+func execFlag(c *cli.Context, name string, fn func(value flag.Value) error) error {
 	v, _ := lookup(c, name)
 	return fn(v)
 }
 
-func isSetFlag(c *cli.Context, name string, isSetfn func(value interface{}) error) error {
+func isSetFlag(c *cli.Context, name string, isSetfn func(value flag.Value) error) error {
 	v, isset := lookup(c, name)
-	if isset {
+	if isset && v != nil {
 		return isSetfn(v)
 	}
 	return nil
@@ -26,11 +27,13 @@ func noFlag(c *cli.Context, fn func() error) (bool, error) {
 	if c.NumFlags() == 0 {
 		return true, fn()
 	}
+
 	return false, nil
 }
 
-func mustHaveCond(c *cli.Context, name string, flagIsSet bool, cond []string, execf func(interface{}) error, miss func() error) (bool, error) {
-	if flagIsSet && !c.IsSet(name) {
+func mustHaveCond(c *cli.Context, name string, flagIsSet bool, cond []string, execf func(flag.Value) error, miss func() error) (bool, error) {
+	v, isSet := lookup(c, name)
+	if flagIsSet && !isSet {
 		return false, &flagError{name, "flag is not set."}
 	}
 
@@ -39,11 +42,12 @@ func mustHaveCond(c *cli.Context, name string, flagIsSet bool, cond []string, ex
 			return false, miss()
 		}
 	}
-	return true, execf(c.Generic(name))
+	return true, execf(v)
 }
 
-func lookup(c *cli.Context, name string) (value interface{}, isset bool) {
-	return c.Generic(name), c.IsSet(name)
+func lookup(c *cli.Context, name string) (value flag.Value, isset bool) {
+
+	return c.Generic(name).(flag.Value), c.IsSet(name)
 }
 
 type flagError struct {
@@ -56,6 +60,7 @@ func (e *flagError) Error() string {
 }
 func (e *flagError) String() string {
 	return fmt.Sprintf("--%s: %s", e.flag, e.msg)
+
 }
 
 func parseArgs(args []string, prefix string) (flags map[string]interface{}, nargs []string, err error) {
@@ -84,6 +89,11 @@ func parseArgs(args []string, prefix string) (flags map[string]interface{}, narg
 			nargs = append(nargs, arg)
 		}
 	}
+	return
+}
+
+func parseRaw(cmdline string, prefix string) (flags map[string]interface{}, nargs []string, err error) {
+
 	return
 }
 
