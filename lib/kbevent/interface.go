@@ -6,6 +6,8 @@ import (
 	"runtime"
 )
 
+
+//Interface for kbevent
 type Interface interface {
 	Parse(seq string) (mods []uint8, key uint8, err error)
 
@@ -28,5 +30,8 @@ type Interface interface {
 	ReadEvents(chan string, chan error)
 }
 
-var ErrUnimplemeted = fmt.Errorf("unimplemented on %s!", runtime.GOOS)
+//ErrUnimplemeted return when not implemented
+var ErrUnimplemeted = fmt.Errorf("unimplemented on %s", runtime.GOOS)
+
+//ErrTerminated when func early returned
 var ErrTerminated = errors.New("GetMessage terminated")
