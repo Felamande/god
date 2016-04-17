@@ -1,8 +1,8 @@
 package hotkey
 
 import (
-	"github.com/Felamande/god/lib/kbevent"
 	"github.com/Felamande/god/lib/jsvm"
+	"github.com/Felamande/god/lib/kbevent"
 	"github.com/Felamande/otto"
 )
 
@@ -10,11 +10,11 @@ var kb = kbevent.New()
 
 func init() {
 	if m := jsvm.Module("hotkey"); m != nil {
-		m.Extend("register", register)
+		m.Extend("bind", bind)
 	}
 }
 
-func register(call otto.FunctionCall) otto.Value {
+func bind(call otto.FunctionCall) otto.Value {
 	hk := call.Argument(0).String()
 	cb := call.Argument(1)
 	errCb := call.Argument(2)
