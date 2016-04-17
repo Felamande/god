@@ -8,10 +8,17 @@ import (
 
 var exitCmd = cli.Command{
 	Name:   "exit",
-	Action: exit,
+	Action: cmder.exit,
 	Usage:  "exit god, or use ctrl+D.",
 }
 
-func exit(*cli.Context) {
+func (c *Cmder) exitOn(*cli.Context) {
+
+}
+func (c *Cmder) exit(*cli.Context) {
+	if c.line != nil && c.history != nil {
+		c.line.WriteHistory(c.history)
+	}
+
 	os.Exit(0)
 }
