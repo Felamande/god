@@ -2,3 +2,5 @@
 *.cmd
 *.bat
 god.js
+tags
+*.sh
