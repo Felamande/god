@@ -22,7 +22,7 @@ import (
 	_ "github.com/Felamande/god/modules/path"
 )
 
-var version = "2.0.0-beta2"
+var version = "2.0.0-beta3"
 
 //Cmder command manager
 type Cmder struct {
