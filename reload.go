@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/god/modules/god"
-	"github.com/Felamande/jsvm"
 	"github.com/codegangsta/cli"
 )
 
