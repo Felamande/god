@@ -5,3 +5,4 @@ god.js
 tags
 *.sh
 debug
+.vscode
