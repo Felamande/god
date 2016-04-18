@@ -9,28 +9,23 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"time"
 
-	"github.com/Felamande/god/lib/process"
 	"github.com/Felamande/god/lib/jsvm"
+	"github.com/Felamande/god/lib/process"
 	"github.com/Felamande/otto"
 )
 
 var actionTime = make(map[string]time.Time)
-var once = new(sync.Once)
 
 func init() {
-	// wd, _ = os.Getwd()var once = new(sync.Once)
-	once.Do(func() {
 
-		if p := jsvm.Module("go"); p != nil {
-			p.Extend("build", build)
-			p.Extend("install", install)
-			p.Extend("test", test)
-			p.Extend("reload", reload)
-		}
-	})
+	if p := jsvm.Module("go"); p != nil {
+		p.Extend("build", build)
+		p.Extend("install", install)
+		p.Extend("test", test)
+		p.Extend("reload", reload)
+	}
 
 }
 
