@@ -7,7 +7,7 @@ import (
 )
 
 func reloadCmd() cli.Command {
-	cli.Command{
+	return cli.Command{
 		Name:   "reload",
 		Usage:  "reload god.js",
 		Action: reload,
