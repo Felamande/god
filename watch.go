@@ -16,10 +16,20 @@ import (
 
 // "github.com/Felamande/god/lib/kbevent"
 
-var watchCmd = cli.Command{
-	Name:   "watch",
-	Action: cmder.watch,
-	Usage:  "watch taskName...(use * to watch all)",
+func watchCmd() cli.Command {
+	return cli.Command{
+		Name:   "watch",
+		Action: cmder.watch,
+		Usage:  "watch taskName...(use * to watch all)",
+	}
+}
+
+func unwatchCmd() cli.Command {
+	return cli.Command{
+		Name:   "unwatch",
+		Action: cmder.unwatch,
+		Usage:  "unwatch tasks, or use ctrl+alt+p",
+	}
 }
 
 func (c *Cmder) watch(ctx *cli.Context) {
@@ -30,10 +40,25 @@ func (c *Cmder) watch(ctx *cli.Context) {
 }
 
 func (c *Cmder) unwatch(ctx *cli.Context) {
-	c.stopWChan <- true
+	if c.isStartWatch {
+		go func() {
+			c.stopWChan <- true
+		}()
+	}
+}
+
+func (c *Cmder) started() {
+	c.isStartWatch = true
+}
+
+func (c *Cmder) stopped() {
+	c.isStartWatch = false
 }
 
 func (c *Cmder) BeginWatch(taskNames ...string) {
+	c.started()
+	defer c.stopped()
+
 	pathutil.SetPrefix(pathutil.PrefixDotSlash)
 	tasks := []*god.WatchTaskRunner{}
 

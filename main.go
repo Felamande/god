@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/peterh/liner"
 
+	"github.com/Felamande/god/lib/pathutil"
 	_ "github.com/Felamande/god/modules/go"
 	"github.com/Felamande/god/modules/god"
 	"github.com/Felamande/god/modules/hotkey"
@@ -24,30 +26,36 @@ import (
 
 var version = "2.0.0-beta3"
 
+type vars map[string]string
+
 //Cmder command manager
 type Cmder struct {
-	line      *liner.State
-	history   *os.File
-	w         *fsnotify.Watcher
-	stopWChan chan bool
-	watchm    *sync.Mutex
-	wd        string
-
-	global map[string]string
+	line         *liner.State
+	history      *os.File
+	w            *fsnotify.Watcher
+	stopWChan    chan bool
+	watchm       *sync.Mutex
+	wd           string
+	isStartWatch bool
+	global       vars
+	replacer     *strings.Replacer
 }
 
-var cmder = &Cmder{
-	stopWChan: make(chan bool, 1),
-	watchm:    new(sync.Mutex),
-	global:    make(map[string]string),
-}
+var cmder *Cmder
 
 func init() {
 	err := jsvm.Run("god.js")
 	if err != nil {
 		fmt.Println(err)
 	}
-	cmder.global["ps1"] = "(god) "
+
+	cmder = &Cmder{
+		stopWChan: make(chan bool, 1),
+		watchm:    new(sync.Mutex),
+		global:    vars{"ps1": "(god) "},
+		replacer:  strings.NewReplacer(`\s`, " ", "${wd}", pathutil.Wd()),
+	}
+
 }
 func main() {
 
@@ -57,7 +65,8 @@ func main() {
 	app.HelpName = app.Name
 	app.Usage = "An automation tool for Go project."
 	app.Action = cmder.enterAction
-	app.Commands = append(app.Commands, initCmd, watchCmd, reloadCmd, exitCmd, historyCmd)
+	app.Commands = append(app.Commands, initCmd(), watchCmd(),
+		reloadCmd(), exitCmd(), historyCmd(), unwatchCmd(), setCmd())
 
 	for name, CbFunc := range god.SubCmd {
 		app.Commands = append(app.Commands, newSubCmd(name, CbFunc))
@@ -74,6 +83,14 @@ func main() {
 	}
 
 	go hotkey.ApplyAll()
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+
+		}
+	}()
+
 	app.Run(os.Args)
 }
 
@@ -97,6 +114,7 @@ func (c *Cmder) enterAction(ctx *cli.Context) {
 	for {
 		argStr, err := line.Prompt(c.global["ps1"])
 		argStr = strings.TrimSpace(argStr)
+
 		if len(argStr) == 0 {
 			continue
 		}
@@ -108,6 +126,7 @@ func (c *Cmder) enterAction(ctx *cli.Context) {
 			continue
 		}
 
+		argStr = c.evalGlobal(argStr)
 		splits := strings.Split(argStr, " ")
 		var args = append([]string{}, "god")
 		for _, s := range splits {
@@ -115,7 +134,7 @@ func (c *Cmder) enterAction(ctx *cli.Context) {
 				args = append(args, s)
 			}
 		}
-		if len(args) == 0 {
+		if len(args) == 1 {
 			continue
 		}
 		if ctx.App.Command(args[1]) == nil {
@@ -126,6 +145,10 @@ func (c *Cmder) enterAction(ctx *cli.Context) {
 
 	}
 
+}
+
+func (c *Cmder) evalGlobal(raw string) string {
+	return c.replacer.Replace(raw)
 }
 
 func newSubCmd(name string, CbFunc jsvm.Func) cli.Command {
@@ -144,4 +167,35 @@ func newSubCmd(name string, CbFunc jsvm.Func) cli.Command {
 
 		SkipFlagParsing: true,
 	}
+}
+
+func (v vars) String() string {
+	if len(v) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+
+}
+
+func setCmd() cli.Command {
+	return cli.Command{
+		Name:      "set",
+		Usage:     fmt.Sprintf("set <key> <value> defaults:%v\n", cmder.global),
+		Action:    cmder.setfn,
+		UsageText: `use \s to represent whitespace`,
+	}
+}
+
+func (c *Cmder) setfn(ctx *cli.Context) {
+	if len(ctx.Args()) != 2 {
+		fmt.Println("set key value")
+		return
+	}
+	k := ctx.Args()[0]
+	v := ctx.Args()[1]
+	c.global[k] = v
 }

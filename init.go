@@ -9,24 +9,25 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var initCmd = cli.Command{
-	Name:   "init",
-	Usage:  "create a default god.js",
-	Action: initfn,
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "override, o",
-			Usage: "override god.js with default.",
+func initCmd() cli.Command {
+	return cli.Command{
+		Name:   "init",
+		Usage:  "create a default god.js",
+		Action: cmder.initfn,
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "override, o",
+				Usage: "override god.js with default.",
+			},
+			cli.BoolFlag{
+				Name:  "ignore, i",
+				Usage: "add god.js to .gitignore",
+			},
 		},
-		cli.BoolFlag{
-			Name:  "ignore, i",
-			Usage: "add god.js to .gitignore",
-		},
-	},
+	}
 }
-
-func initfn(c *cli.Context) {
-	noflag, err := noFlag(c, func() error {
+func (c *Cmder) initfn(ctx *cli.Context) {
+	noflag, err := noFlag(ctx, func() error {
 		if fi, _ := os.Stat("god.js"); fi != nil {
 			fmt.Println("already had a god.js, use --override or -o to override it with the default one.")
 			return nil
@@ -42,7 +43,7 @@ func initfn(c *cli.Context) {
 		return
 	}
 
-	isSetFlag(c, "override",
+	isSetFlag(ctx, "override",
 		func(flag.Value) error {
 			ioutil.WriteFile("god.js", []byte(defaultjs), 0777)
 			fmt.Println("--override: god.js overrided.")
@@ -50,7 +51,7 @@ func initfn(c *cli.Context) {
 		},
 	)
 
-	isSetFlag(c, "ignore",
+	isSetFlag(ctx, "ignore",
 		func(flag.Value) error {
 			f, err := os.OpenFile(".gitignore", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777)
 			if err != nil {
@@ -179,6 +180,5 @@ god.watch("breload","*.go", false,
 )
 
 // TODO:
-// 1.the way to unwatch tasks.
 // 2.separate normal tasks from watch tasks.
 `

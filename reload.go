@@ -6,10 +6,12 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var reloadCmd = cli.Command{
-	Name:   "reload",
-	Usage:  "reload god.js",
-	Action: reload,
+func reloadCmd() cli.Command {
+	cli.Command{
+		Name:   "reload",
+		Usage:  "reload god.js",
+		Action: reload,
+	}
 }
 
 func reload(c *cli.Context) {
