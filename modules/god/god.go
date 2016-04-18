@@ -5,7 +5,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Felamande/god/lib/jsvm"
@@ -27,22 +26,19 @@ var SubCmd map[string]jsvm.Func
 var ignored map[string]bool
 var wd string
 var Init jsvm.Func
-var onceInitMod = new(sync.Once)
 
 func init() {
-	onceInitMod.Do(func() {
-		allTasks = make(map[string]*WatchTaskRunner)
-		SubCmd = make(map[string]jsvm.Func)
-		ignored = make(map[string]bool)
-		wd, _ = os.Getwd()
-		wd = filepath.ToSlash(wd)
-		if p := jsvm.Module("god"); p != nil {
-			p.Extend("watch", watch)
-			p.Extend("ignore", ignore)
-			p.Extend("init", initfn)
-			p.Extend("subcmd", subcmd)
-		}
-	})
+	allTasks = make(map[string]*WatchTaskRunner)
+	SubCmd = make(map[string]jsvm.Func)
+	ignored = make(map[string]bool)
+	wd, _ = os.Getwd()
+	wd = filepath.ToSlash(wd)
+	if p := jsvm.Module("god"); p != nil {
+		p.Extend("watch", watch)
+		p.Extend("ignore", ignore)
+		p.Extend("init", initfn)
+		p.Extend("subcmd", subcmd)
+	}
 
 }
 
