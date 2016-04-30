@@ -19,7 +19,7 @@ import (
 	_ "github.com/Felamande/god/modules/go"
 	"github.com/Felamande/god/modules/god"
 	"github.com/Felamande/god/modules/hotkey"
-	// _ "github.com/Felamande/god/modules/localstorage"
+	_ "github.com/Felamande/god/modules/localstorage"
 
 	_ "github.com/Felamande/god/modules/log"
 	_ "github.com/Felamande/god/modules/os"
@@ -63,7 +63,11 @@ func init() {
 
 }
 func main() {
-
+	err := jsvm.Run("god.js")
+	if err != nil {
+		fmt.Println(err)
+	}
+	god.Init.Call()
 	app := cli.NewApp()
 	app.Version = version
 	app.Name = filepath.Base(os.Args[0])
@@ -77,7 +81,7 @@ func main() {
 		app.Commands = append(app.Commands, newSubCmd(name, CbFunc))
 	}
 
-	err := hotkey.Bind("ctrl+d", func() { cmder.exit(nil) })
+	err = hotkey.Bind("ctrl+d", func() { cmder.exit(nil) })
 	if err != nil {
 		fmt.Println(err)
 
@@ -89,11 +93,6 @@ func main() {
 
 	go hotkey.ApplyAll()
 
-	err = jsvm.Run("god.js")
-	if err != nil {
-		fmt.Println(err)
-	}
-	god.Init.Call()
 	app.Run(os.Args)
 }
 
