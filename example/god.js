@@ -9,11 +9,11 @@ go = require("go")
 hk  = require("hotkey")
 
 
-//register hotkey as you like
-hk.register("ctrl+shift+o",function() {
+//bind hotkey as you like
+hk.bind("ctrl+shift+o",function() {
     log.info("hotkey","ctrl+shift+o")
 })
-hk.register("ctrl+shift+k",function() {
+hk.bind("ctrl+shift+k",function() {
     log.info("hotkey","ctrl+shift+k")
 })
 
@@ -43,13 +43,14 @@ god.subcmd("eval",function (nargs,flags) {
 })
 
 god.subcmd("test",function(pkgs,flags){
-    for(i in pkgs){
-       log.info("test",pkgs[i])
-        go.test(pkgs[i], testArgs, function(err) { log.error(err) })  
-    }
-    
+       log.info("test",pkgs[0])
+        go.test(pkgs[0], testArgs, function(err) { log.error(err) })  
 })
 
+god.subcmd("install",function(pkgs,flags){
+       log.info("test",pkgs[0])
+        go.test(pkgs[0], testArgs, function(err) { log.error(err) })  
+})
 
 god.subcmd("exec",function(nargs,flags){os.exec(nargs)})
 
