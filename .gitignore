@@ -6,3 +6,6 @@ tags
 *.sh
 debug
 .vscode
+*.db
+localstorage.lvdb
+*.qldb
