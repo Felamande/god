@@ -19,6 +19,8 @@ import (
 	_ "github.com/Felamande/god/modules/go"
 	"github.com/Felamande/god/modules/god"
 	"github.com/Felamande/god/modules/hotkey"
+	// _ "github.com/Felamande/god/modules/localstorage"
+
 	_ "github.com/Felamande/god/modules/log"
 	_ "github.com/Felamande/god/modules/os"
 	_ "github.com/Felamande/god/modules/path"
@@ -30,30 +32,33 @@ type vars map[string]string
 
 //Cmder command manager
 type Cmder struct {
-	line         *liner.State
-	history      *os.File
-	w            *fsnotify.Watcher
-	stopWChan    chan bool
-	watchm       *sync.Mutex
-	wd           string
-	isStartWatch bool
-	global       vars
-	replacer     *strings.Replacer
+	line           *liner.State
+	history        *os.File
+	w              *fsnotify.Watcher
+	stopWChan      chan bool
+	watchm         *sync.Mutex
+	wd             string
+	isStartWatch   bool
+	global         vars
+	varsReplacer   *strings.Replacer
+	escapeReplacer *strings.Replacer
 }
 
 var cmder *Cmder
 
 func init() {
-	err := jsvm.Run("god.js")
-	if err != nil {
-		fmt.Println(err)
-	}
 
 	cmder = &Cmder{
 		stopWChan: make(chan bool, 1),
 		watchm:    new(sync.Mutex),
 		global:    vars{"ps1": "(god) "},
-		replacer:  strings.NewReplacer(`\s`, " ", "${wd}", pathutil.Wd()),
+		varsReplacer: strings.NewReplacer(
+			"${wd}", pathutil.Wd(),
+		),
+		escapeReplacer: strings.NewReplacer(
+			`\s`, " ",
+			`\n`, "\n",
+		),
 	}
 
 }
@@ -84,19 +89,15 @@ func main() {
 
 	go hotkey.ApplyAll()
 
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println(r)
-
-		}
-	}()
-
+	err = jsvm.Run("god.js")
+	if err != nil {
+		fmt.Println(err)
+	}
+	god.Init.Call()
 	app.Run(os.Args)
 }
 
 func (c *Cmder) enterAction(ctx *cli.Context) {
-
-	god.Init.Call()
 	line := liner.NewLiner()
 	defer line.Close()
 	line.SetCtrlCAborts(false)
@@ -148,7 +149,11 @@ func (c *Cmder) enterAction(ctx *cli.Context) {
 }
 
 func (c *Cmder) evalGlobal(raw string) string {
-	return c.replacer.Replace(raw)
+	return c.varsReplacer.Replace(raw)
+}
+
+func (c *Cmder) evalEscape(raw string) string {
+	return c.escapeReplacer.Replace(raw)
 }
 
 func newSubCmd(name string, CbFunc jsvm.Func) cli.Command {
@@ -197,5 +202,5 @@ func (c *Cmder) setfn(ctx *cli.Context) {
 	}
 	k := ctx.Args()[0]
 	v := ctx.Args()[1]
-	c.global[k] = v
+	c.global[k] = c.evalEscape(v)
 }
