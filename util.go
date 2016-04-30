@@ -78,7 +78,9 @@ func parseArgs(args []string, prefix string) (flags map[string]interface{}, narg
 			nargs = append(nargs, arg[1:alen-1])
 		case strings.HasPrefix(arg, prefix):
 			expr := strings.TrimLeft(arg, prefix)
-
+			if expr == "" {
+				return nil, nil, fmt.Errorf("syntax error: expect argument")
+			}
 			k, v, err := eval(expr)
 			if err != nil {
 				return nil, nil, err
