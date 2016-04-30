@@ -319,3 +319,6 @@ func Format(path string) string {
 func GetPath(path string) (abs, rel string, err error) {
 	return defaultf.GetPath(path)
 }
+func Wd() string {
+	return defaultf.Wd()
+}
