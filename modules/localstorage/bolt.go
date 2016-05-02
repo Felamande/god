@@ -6,7 +6,7 @@ type boltStorage struct {
 }
 
 func (bs *boltStorage) Put(key []byte, value []byte) error {
-	db, err := bolt.Open("localstorage.db", 0777, nil)
+	db, err := bolt.Open("localstorage.bolt", 0777, nil)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (bs *boltStorage) Put(key []byte, value []byte) error {
 func (bs *boltStorage) Get(key []byte) (value []byte, err error) {
 	// fmt.Println(runtime.Caller(0))
 	// fmt.Println("hello get")
-	db, err := bolt.Open("localstorage.db", 0777, nil)
+	db, err := bolt.Open("localstorage.bolt", 0777, nil)
 	if err != nil {
 		return nil, err
 	}

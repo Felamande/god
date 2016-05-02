@@ -20,8 +20,8 @@ func makePutFn(s Storage) func(call otto.FunctionCall) otto.Value {
 		val := call.Argument(1).String()
 		errCb := call.Argument(2)
 		var err error
-		if clone, ok := s.(Cloner); ok {
-			err = clone.Clone().Put([]byte(key), []byte(val))
+		if cloner, ok := s.(Cloner); ok {
+			err = cloner.Clone().Put([]byte(key), []byte(val))
 		} else {
 			err = s.Put([]byte(key), []byte(val))
 		}
@@ -39,8 +39,8 @@ func makeGetFn(s Storage) func(call otto.FunctionCall) otto.Value {
 		errCb := call.Argument(1)
 		var val []byte
 		var err error
-		if clone, ok := s.(Cloner); ok {
-			val, err = clone.Clone().Get([]byte(key))
+		if cloner, ok := s.(Cloner); ok {
+			val, err = cloner.Clone().Get([]byte(key))
 		} else {
 			val, err = s.Get([]byte(key))
 		}
@@ -50,5 +50,3 @@ func makeGetFn(s Storage) func(call otto.FunctionCall) otto.Value {
 		return jsvm.StringValue(string(val))
 	}
 }
-
-var localStorageType = make(map[string]Storage)
