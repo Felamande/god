@@ -7,14 +7,17 @@ import (
 	"github.com/Felamande/otto"
 )
 
-var defaultType = "bolt"
+var defaultType = "gkvlite"
+var localStorageType map[string]Storage
 
 func init() {
 	if m := jsvm.Module("localstorage"); m != nil {
+		localStorageType = make(map[string]Storage)
 		localStorageType["bolt"] = &boltStorage{}
-		localStorageType["mock"] = &mockStorage{make(map[string]string)}
+		localStorageType["gomap"] = &mapStorage{make(map[string]string)}
 		localStorageType["leveldb"] = &lvdbStorage{}
-		localStorageType["qldb"] = &qlStorage{}
+		// localStorageType["qldb"] = &qlStorage{}
+		localStorageType["gkvlite"] = &kvdbStorage{}
 		m.Extend("put", put)
 		m.Extend("get", get)
 		m.Extend("use", use)
@@ -42,7 +45,7 @@ func put(call otto.FunctionCall) otto.Value {
 
 	storage, ok := localStorageType[defaultType]
 	if !ok {
-		fmt.Println("unsupported", defaultType)
+		fmt.Println("unsupported backend", defaultType)
 		return otto.UndefinedValue()
 	}
 
@@ -52,7 +55,7 @@ func put(call otto.FunctionCall) otto.Value {
 func get(call otto.FunctionCall) otto.Value {
 	storage, ok := localStorageType[defaultType]
 	if !ok {
-		fmt.Println("unsupported", defaultType)
+		fmt.Println("unsupported backend", defaultType)
 		return otto.UndefinedValue()
 	}
 	return makeGetFn(storage)(call)
