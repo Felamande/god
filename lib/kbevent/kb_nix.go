@@ -2,11 +2,16 @@
 
 package kbevent
 
+import (
+	"github.com/jteeuwen/evdev"
+)
+
 func New() Interface {
 	return &Keyboard{}
 }
 
 type Keyboard struct {
+	dev *evdev.Device
 }
 
 func (k *Keyboard) Init() error {
