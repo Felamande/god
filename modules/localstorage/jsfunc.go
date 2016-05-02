@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Felamande/god/lib/jsvm"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 var defaultType = "gkvlite"

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 type Func otto.Value

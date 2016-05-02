@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/Felamande/god/lib/jsvm"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 func init() {
@@ -243,10 +243,11 @@ func setenv(call otto.FunctionCall) otto.Value {
 	}
 
 	obj := objv.Object()
-	obj.ForEach(func(key string) {
+	for _, key := range obj.Keys() {
 		v, _ := obj.Get(key)
 		os.Setenv(key, v.String())
-	})
+	}
+
 	return otto.UndefinedValue()
 
 }

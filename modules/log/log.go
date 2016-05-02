@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/Felamande/god/lib/jsvm"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 	"github.com/qiniu/log"
 )
 

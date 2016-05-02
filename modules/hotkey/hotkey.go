@@ -3,7 +3,7 @@ package hotkey
 import (
 	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/god/lib/kbevent"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 var kb = kbevent.New()

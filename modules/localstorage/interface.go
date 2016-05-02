@@ -2,7 +2,7 @@ package localstorage
 
 import (
 	"github.com/Felamande/god/lib/jsvm"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 type Cloner interface {

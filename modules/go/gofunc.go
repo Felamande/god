@@ -13,7 +13,7 @@ import (
 
 	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/god/lib/process"
-	"github.com/Felamande/otto"
+	"github.com/robertkrimen/otto"
 )
 
 var actionTime = make(map[string]time.Time)
