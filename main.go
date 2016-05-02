@@ -67,8 +67,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	
-	god.Init.Call()
+
 	app := cli.NewApp()
 	app.Version = version
 	app.Name = filepath.Base(os.Args[0])

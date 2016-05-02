@@ -7,11 +7,6 @@ import (
 	"github.com/Felamande/otto"
 )
 
-// type Object interface {
-// 	Extend(funcName string, Func func(call otto.FunctionCall) otto.Value) error
-// 	Obj() *otto.Object
-// 	Type() ObjType
-// }
 type Func otto.Value
 
 func (f Func) Call(args ...interface{}) {
@@ -22,6 +17,9 @@ type module struct {
 	obj      *otto.Object
 	methods  map[string]interface{}
 	required bool
+	initfn   func()
+	deferfn  func()
+
 	// register string
 }
 
@@ -79,7 +77,9 @@ func require(call otto.FunctionCall) otto.Value {
 		p.obj.Set(name, method)
 	}
 	p.required = true
-
+	if p.initfn != nil {
+		p.initfn()
+	}
 	return p.obj.Value()
 
 }
@@ -93,9 +93,17 @@ func Module(name string) *module {
 
 	vm.Set(name, o)
 
-	m := &module{o, make(map[string]interface{}), false}
+	m := &module{obj: o, methods: make(map[string]interface{}), required: false}
 	modules[name] = m
 	return m
+}
+
+func (m *module) Init(f func()) {
+	m.initfn = f
+}
+
+func (m *module) Defer(f func()) {
+	m.deferfn = f
 }
 
 func (m *module) Extend(obj string, Func func(call otto.FunctionCall) otto.Value) {
@@ -165,3 +173,9 @@ func ToObject(o O) otto.Value {
 }
 
 type O map[string]interface{}
+
+func CallDefer() {
+	for _, m := range modules {
+		m.deferfn()
+	}
+}

@@ -25,7 +25,6 @@ var allTasks map[string]*WatchTaskRunner
 var SubCmd map[string]jsvm.Func
 var ignored map[string]bool
 var wd string
-var Init jsvm.Func
 
 func init() {
 	allTasks = make(map[string]*WatchTaskRunner)
@@ -36,7 +35,6 @@ func init() {
 	if p := jsvm.Module("god"); p != nil {
 		p.Extend("watch", watch)
 		p.Extend("ignore", ignore)
-		p.Extend("init", initfn)
 		p.Extend("subcmd", subcmd)
 	}
 
@@ -52,12 +50,6 @@ func GetAllTasks() (all []*WatchTaskRunner) {
 		all = append(all, t)
 	}
 	return
-}
-
-// function init(initfn, fnArgs...)
-func initfn(call otto.FunctionCall) otto.Value {
-	Init = jsvm.Func(call.Argument(0))
-	return otto.UndefinedValue()
 }
 
 func ignore(call otto.FunctionCall) otto.Value {
