@@ -14,10 +14,11 @@ func exitCmd() cli.Command {
 	}
 }
 
-func (c *Cmder) exit(*cli.Context) {
+func (c *Cmder) exit(*cli.Context) error {
 	if c.line != nil && c.history != nil {
 		c.line.WriteHistory(c.history)
 	}
 
 	os.Exit(0)
+	return nil
 }

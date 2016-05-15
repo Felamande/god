@@ -32,19 +32,21 @@ func unwatchCmd() cli.Command {
 	}
 }
 
-func (c *Cmder) watch(ctx *cli.Context) {
+func (c *Cmder) watch(ctx *cli.Context) error {
 
 	go c.BeginWatch(ctx.Args()...)
+	return nil
 
 	// go c.BeginWatch(ctx.Args()...)
 }
 
-func (c *Cmder) unwatch(ctx *cli.Context) {
+func (c *Cmder) unwatch(ctx *cli.Context) error {
 	if c.isStartWatch {
 		go func() {
 			c.stopWChan <- true
 		}()
 	}
+	return nil
 }
 
 func (c *Cmder) started() {

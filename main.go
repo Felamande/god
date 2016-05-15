@@ -10,17 +10,19 @@ import (
 
 	"gopkg.in/fsnotify.v1"
 
-	"github.com/Felamande/god/lib/jsvm"
-
 	"github.com/codegangsta/cli"
 	"github.com/peterh/liner"
+	//"gopkg.in/fsnotify.v1"
 
+	//libs
+	"github.com/Felamande/god/lib/jsvm"
 	"github.com/Felamande/god/lib/pathutil"
+
+	//modules
 	_ "github.com/Felamande/god/modules/go"
 	"github.com/Felamande/god/modules/god"
 	"github.com/Felamande/god/modules/hotkey"
 	_ "github.com/Felamande/god/modules/localstorage"
-
 	_ "github.com/Felamande/god/modules/log"
 	_ "github.com/Felamande/god/modules/os"
 	_ "github.com/Felamande/god/modules/path"
@@ -83,12 +85,12 @@ func main() {
 
 	err = hotkey.Bind("ctrl+d", func() { cmder.exit(nil) })
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("hotkey:", err)
 
 	}
 	err = hotkey.Bind("ctrl+alt+p", func() { cmder.unwatch(nil) })
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("hotkey:", err)
 	}
 
 	go hotkey.ApplyAll()
@@ -158,14 +160,14 @@ func (c *Cmder) evalEscape(raw string) string {
 func newSubCmd(name string, CbFunc jsvm.Func) cli.Command {
 	return cli.Command{
 		Name: name,
-		Action: func(c *cli.Context) {
+		Action: func(c *cli.Context) error {
 			arg := c.Args()
 			flags, nargs, err := parseArgs(arg, "-")
 			if err != nil {
-				fmt.Println(name+": ", err)
-				return
+				return err
 			}
 			CbFunc.Call(nargs, flags)
+			return nil
 		},
 		Usage: "user defined command " + name,
 
@@ -194,12 +196,13 @@ func setCmd() cli.Command {
 	}
 }
 
-func (c *Cmder) setfn(ctx *cli.Context) {
+func (c *Cmder) setfn(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
 		fmt.Println("set key value")
-		return
+		return nil
 	}
 	k := ctx.Args()[0]
 	v := ctx.Args()[1]
 	c.global[k] = c.evalEscape(v)
+	return nil
 }

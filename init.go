@@ -26,21 +26,19 @@ func initCmd() cli.Command {
 		},
 	}
 }
-func (c *Cmder) initfn(ctx *cli.Context) {
-	noflag, err := noFlag(ctx, func() error {
+func (c *Cmder) initfn(ctx *cli.Context) error {
+
+	if noflag, err := noFlag(ctx, func() error {
 		if fi, _ := os.Stat("god.js"); fi != nil {
 			fmt.Println("already had a god.js, use --override or -o to override it with the default one.")
 			return nil
 		}
 		return ioutil.WriteFile("god.js", []byte(defaultjs), 0777)
 
-	})
-
-	if noflag {
-		if err != nil {
-			fmt.Println(err)
-		}
-		return
+	}); err != nil {
+		return err
+	} else if noflag {
+		return nil
 	}
 
 	isSetFlag(ctx, "override",
@@ -51,12 +49,11 @@ func (c *Cmder) initfn(ctx *cli.Context) {
 		},
 	)
 
-	isSetFlag(ctx, "ignore",
+	return isSetFlag(ctx, "ignore",
 		func(flag.Value) error {
 			f, err := os.OpenFile(".gitignore", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777)
 			if err != nil {
-				fmt.Println("--ignore:", err)
-				return nil
+				return &flagError{flag: "ignore", msg: err.Error()}
 			}
 			defer f.Close()
 
@@ -73,10 +70,9 @@ func (c *Cmder) initfn(ctx *cli.Context) {
 
 			_, err = f.WriteString(newline + "god.js\n")
 			if err != nil {
-				fmt.Println("--ignore:", err)
-				return nil
+				return &flagError{flag: "ignore", msg: err.Error()}
 			}
-			fmt.Println("--ignore: ok")
+
 			return nil
 		},
 	)

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/codegangsta/cli"
 )
@@ -20,15 +20,14 @@ func historyCmd() cli.Command {
 	}
 }
 
-func (c *Cmder) cleanHistory(ctx *cli.Context) {
+func (c *Cmder) cleanHistory(ctx *cli.Context) error {
 	if c.history == nil {
-		fmt.Println("no history found")
-		return
+		return errors.New("no history found")
 	}
 	err := c.history.Truncate(0)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
-	c.history.Sync()
+	return c.history.Sync()
 
 }

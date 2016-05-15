@@ -13,6 +13,6 @@ func reloadCmd() cli.Command {
 	}
 }
 
-func reload(c *cli.Context) {
-	jsvm.Run("god.js")
+func reload(c *cli.Context) error {
+	return jsvm.Run("god.js")
 }
