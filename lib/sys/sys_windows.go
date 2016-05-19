@@ -17,8 +17,7 @@ type IHwnd interface {
 
 type HWND uintptr
 type BOOL uint32
-type Modifier uint8
-type Key uint8
+
 
 func (h HWND) Hwnd() uintptr {
 	return uintptr(h)

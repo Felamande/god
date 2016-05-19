@@ -1,9 +1,8 @@
-// +build !windows
 
 package kbevent
 
 import (
-	"github.com/jteeuwen/evdev"
+	// "gopkg.in/xkg.v0"
 )
 
 func New() Interface {
@@ -11,15 +10,14 @@ func New() Interface {
 }
 
 type Keyboard struct {
-	dev *evdev.Device
 }
 
-func (k *Keyboard) Init() error {
-
+func (k *Keyboard) Init() (err error ){
 	return nil
 }
 
 func (k *Keyboard) KeyCodeOf(key string) (uint8, bool) {
+	
 	return 0, false
 }
 
